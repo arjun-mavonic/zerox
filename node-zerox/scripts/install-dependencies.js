@@ -1,6 +1,5 @@
 const { exec } = require("child_process");
 const { promisify } = require("util");
-const fs = require("fs");
 
 const execPromise = promisify(exec);
 
@@ -26,9 +25,27 @@ const isSudoAvailable = async () => {
   }
 };
 
+const isAlpine = async () => {
+  try {
+    const { stdout } = await execPromise("cat /etc/os-release");
+    return stdout.includes("alpine");
+  } catch {
+    return false;
+  }
+};
+
 const checkAndInstall = async () => {
   try {
     const sudoAvailable = await isSudoAvailable();
+    const alpine = await isAlpine();
+
+    // Function to determine the appropriate install command
+    const installCommand = (pkg) =>
+      alpine
+        ? `apk add --no-cache ${pkg}`
+        : sudoAvailable
+        ? `sudo apt-get update && sudo apt-get install -y ${pkg}`
+        : `apt-get update && apt-get install -y ${pkg}`;
 
     // Check and install Ghostscript
     try {
@@ -36,15 +53,11 @@ const checkAndInstall = async () => {
     } catch {
       if (process.platform === "darwin") {
         await installPackage("brew install ghostscript", "Ghostscript");
-      } else if (process.platform === "linux") {
-        const command = sudoAvailable
-          ? "sudo apt-get update && sudo apt-get install -y ghostscript"
-          : "apt-get update && apt-get install -y ghostscript";
-        await installPackage(command, "Ghostscript");
       } else {
-        throw new Error(
-          "Please install Ghostscript manually from https://www.ghostscript.com/download.html"
-        );
+        const command = alpine
+          ? "apk add --no-cache ghostscript"
+          : installCommand("ghostscript");
+        await installPackage(command, "Ghostscript");
       }
     }
 
@@ -54,15 +67,11 @@ const checkAndInstall = async () => {
     } catch {
       if (process.platform === "darwin") {
         await installPackage("brew install graphicsmagick", "GraphicsMagick");
-      } else if (process.platform === "linux") {
-        const command = sudoAvailable
-          ? "sudo apt-get update && sudo apt-get install -y graphicsmagick"
-          : "apt-get update && apt-get install -y graphicsmagick";
-        await installPackage(command, "GraphicsMagick");
       } else {
-        throw new Error(
-          "Please install GraphicsMagick manually from http://www.graphicsmagick.org/download.html"
-        );
+        const command = alpine
+          ? "apk add --no-cache graphicsmagick"
+          : installCommand("graphicsmagick");
+        await installPackage(command, "GraphicsMagick");
       }
     }
 
@@ -72,15 +81,11 @@ const checkAndInstall = async () => {
     } catch {
       if (process.platform === "darwin") {
         await installPackage("brew install --cask libreoffice", "LibreOffice");
-      } else if (process.platform === "linux") {
-        const command = sudoAvailable
-          ? "sudo apt-get update && sudo apt-get install -y libreoffice"
-          : "apt-get update && apt-get install -y libreoffice";
-        await installPackage(command, "LibreOffice");
       } else {
-        throw new Error(
-          "Please install LibreOffice manually from https://www.libreoffice.org/download/download/"
-        );
+        const command = alpine
+          ? "apk add --no-cache libreoffice"
+          : installCommand("libreoffice");
+        await installPackage(command, "LibreOffice");
       }
     }
   } catch (err) {
