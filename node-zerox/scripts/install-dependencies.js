@@ -83,7 +83,7 @@ const checkAndInstall = async () => {
         await installPackage("brew install --cask libreoffice", "LibreOffice");
       } else {
         const command = alpine
-          ? "apk add --no-cache libreoffice"
+          ? "apk add --no-cache icu-libs icu-dev libreoffice"
           : installCommand("libreoffice");
         await installPackage(command, "LibreOffice");
       }
